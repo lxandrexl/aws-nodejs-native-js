@@ -1,0 +1,53 @@
+service: StarWarsAPI
+frameworkVersion: '2'
+
+custom:
+  tableName: 'vehiculos-table-${self:provider.stage}'
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - { "Fn::GetAtt": ["VehiculosDynamoDBTable", "Arn"] }
+  environment:
+    VEHICULOS_TABLE: ${self:custom.tableName}
+
+functions:
+  app:
+    handler: src/index.generic
+    events:
+      - http: ANY /
+      - http: ANY {proxy+}
+
+resources:
+  Resources:
+    VehiculosDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: vehiculoId
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: vehiculoId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableName}
